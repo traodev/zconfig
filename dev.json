@@ -1,0 +1,113 @@
+{
+  "environment": "dev",
+  "domain": "dev.*******.ovh",
+  "network": {
+    "cidr": "10.20.0.0/16",
+    "gateway": "10.20.0.1",
+    "dns": [
+      "1.1.1.1",
+      "8.8.8.8"
+    ],
+    "vlans": {
+      "proxy": 20,
+      "game": 21,
+      "database": 22,
+      "management": 23
+    }
+  },
+  "nodes": {
+    "dev-01": {
+      "hostname": "dev-01",
+      "address": "10.20.1.10",
+      "publicAddress": "203.0.113.10",
+      "role": [
+        "proxy",
+        "game",
+        "docker"
+      ],
+      "ssh": {
+        "port": 22,
+        "user": "deploy"
+      }
+    }
+  },
+  "services": {
+    "velocity": {
+      "nodes": [
+        "dev-01"
+      ],
+      "port": 25565,
+      "protocol": "tcp"
+    },
+    "game": {
+      "network": "10.20.21.0/24",
+      "portRange": {
+        "start": 30000,
+        "end": 30100
+      }
+    },
+    "redis": {
+      "host": "10.20.22.10",
+      "port": 6379
+    },
+    "mongodb": {
+      "host": "10.20.22.11",
+      "port": 27017
+    }
+  },
+  "firewall": {
+    "defaultPolicy": "DROP",
+    "rules": [
+      {
+        "name": "minecraft",
+        "protocol": "tcp",
+        "port": 25565,
+        "source": "0.0.0.0/0",
+        "action": "ALLOW"
+      },
+      {
+        "name": "ssh",
+        "protocol": "tcp",
+        "port": 22,
+        "source": "10.20.23.0/24",
+        "action": "ALLOW"
+      },
+      {
+        "name": "redis",
+        "protocol": "tcp",
+        "port": 6379,
+        "source": "10.20.22.0/24",
+        "action": "ALLOW"
+      },
+      {
+        "name": "mongodb",
+        "protocol": "tcp",
+        "port": 27017,
+        "source": "10.20.22.0/24",
+        "action": "ALLOW"
+      }
+    ]
+  },
+  "dns": {
+    "records": [
+      {
+        "name": "play",
+        "type": "A",
+        "value": "203.0.113.10",
+        "ttl": 60
+      },
+      {
+        "name": "proxy.{id}",
+        "type": "A",
+        "value": "203.0.113.10",
+        "ttl": 60
+      }
+    ]
+  },
+  "routing": {
+    "internal": [
+      "10.20.0.0/16"
+    ],
+    "blackhole": []
+  }
+}
