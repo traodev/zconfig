@@ -1,0 +1,183 @@
+{
+  "environment": "local",
+  "domain": "localhost",
+
+  "network": {
+    "cidr": "127.0.0.0/8",
+    "gateway": "127.0.0.1",
+    "dns": [
+      "1.1.1.1",
+      "8.8.8.8"
+    ],
+    "interface": "lo",
+
+    "vlans": {
+      "proxy": null,
+      "game": null,
+      "database": null,
+      "management": null
+    }
+  },
+
+  "nodes": {
+    "localhost": {
+      "hostname": "localhost",
+      "address": "127.0.0.1",
+      "publicAddress": null,
+
+      "role": [
+        "proxy",
+        "game",
+        "database",
+        "docker",
+        "management"
+      ],
+
+      "ssh": {
+        "enabled": false,
+        "port": 22,
+        "user": "nicolas"
+      }
+    }
+  },
+
+  "services": {
+    "proxy": {
+      "nodes": [
+        "localhost"
+      ],
+
+      "ports": {
+        "minecraft": 25565,
+        "status": 25566,
+        "admin": 8080
+      },
+
+      "bind": "127.0.0.1"
+    },
+
+    "game": {
+      "network": "127.0.0.1",
+
+      "portRange": {
+        "start": 30000,
+        "end": 30100
+      },
+
+      "allocation": {
+        "strategy": "sequential",
+        "reusePorts": true,
+        "healthCheck": false
+      }
+    },
+
+    "mongodb": {
+      "enabled": true,
+      "host": "127.0.0.1",
+      "port": 27017,
+      "database": "kho_local",
+
+      "cluster": false
+    },
+
+    "redis": {
+      "enabled": true,
+      "host": "127.0.0.1",
+      "port": 6379,
+      "database": 0,
+
+      "cluster": false
+    },
+
+    "docker": {
+      "enabled": true,
+      "network": "kho-local",
+
+      "bridge": {
+        "subnet": "172.30.0.0/24",
+        "gateway": "172.30.0.1"
+      }
+    },
+
+    "monitoring": {
+      "enabled": false,
+
+      "prometheus": {
+        "host": "127.0.0.1",
+        "port": 9090
+      },
+
+      "grafana": {
+        "host": "127.0.0.1",
+        "port": 3000
+      }
+    }
+  },
+
+  "firewall": {
+    "enabled": false,
+    "defaultPolicy": "ACCEPT",
+
+    "rules": []
+  },
+
+  "dns": {
+    "mode": "hosts",
+
+    "records": [
+      {
+        "name": "play.localhost",
+        "type": "A",
+        "value": "127.0.0.1"
+      },
+      {
+        "name": "proxy.localhost",
+        "type": "A",
+        "value": "127.0.0.1"
+      },
+      {
+        "name": "api.localhost",
+        "type": "A",
+        "value": "127.0.0.1"
+      }
+    ]
+  },
+
+  "routing": {
+    "internal": [
+      "127.0.0.0/8",
+      "172.30.0.0/24"
+    ],
+
+    "peering": [],
+
+    "failover": {
+      "enabled": false
+    }
+  },
+
+  "ddos": {
+    "enabled": false,
+
+    "rateLimit": {
+      "enabled": false
+    },
+
+    "connectionTracking": {
+      "enabled": false
+    }
+  },
+
+  "development": {
+    "debug": true,
+    "hotReload": true,
+    "verboseLogs": true,
+
+    "exposeServices": {
+      "proxy": true,
+      "game": true,
+      "mongodb": true,
+      "redis": true
+    }
+  }
+}
