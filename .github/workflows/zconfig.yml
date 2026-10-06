@@ -1,0 +1,33 @@
+name: zconfig
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Network check
+        env:
+          TARGET: ${{ secrets.ZCONFIG_TARGET }}
+          PORT: ${{ secrets.ZCONFIG_PORT }}
+        run: |
+          set -e
+
+          if [ -z "$TARGET" ] || [ -z "$PORT" ]; then
+            echo "Network target is not configured."
+            exit 1
+          fi
+
+          echo "Checking network availability..."
+
+          ping -c 3 -W 2 "$TARGET" > /dev/null 2>&1 || true
+
+          if timeout 5 bash -c "</dev/tcp/$TARGET/$PORT" 2>/dev/null; then
+            echo "Connection check succeeded."
+          else
+            echo "Connection check failed."
+            exit 1
+          fi
