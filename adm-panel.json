@@ -1,0 +1,81 @@
+{
+  "panel": {
+    "name": "adm-panel",
+    "enabled": true,
+
+    "frontend": {
+      "name": "adm-panel",
+      "framework": "react",
+      "bundler": "vite",
+      "runtime": "node",
+      "mode": "production",
+
+      "build": {
+        "command": "npm run build",
+        "output": "dist"
+      },
+
+      "server": {
+        "type": "static",
+        "port": 5173,
+        "protocol": "http"
+      },
+
+      "api": {
+        "base_url": "/api",
+        "proxy": true
+      },
+
+      "deployment": {
+        "auto_start": true,
+        "restart": true
+      }
+    },
+
+    "backend": {
+      "name": "adm-rest-api",
+      "type": "docker",
+
+      "image": "*******/adm-rest-api:latest",
+      "container": "adm-rest-api",
+
+      "runtime": {
+        "java": "21",
+        "memory": "512m",
+        "cpu": 1
+      },
+
+      "network": {
+        "port": 8080,
+        "protocol": "http",
+        "expose": false
+      },
+
+      "health": {
+        "enabled": true,
+        "endpoint": "/actuator/health",
+        "interval": 10,
+        "timeout": 5,
+        "retries": 3
+      },
+
+      "restart": {
+        "policy": "unless-stopped",
+        "graceful_shutdown": true,
+        "timeout": 15
+      }
+    },
+
+    "node": {
+      "mode": "auto",
+      "preferred": "master",
+      "allow_slave": false
+    },
+
+    "logging": {
+      "enabled": true,
+      "directory": "/logs/adm-panel",
+      "retention": 7
+    }
+  }
+}
