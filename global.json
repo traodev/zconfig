@@ -1,0 +1,392 @@
+{
+  "project": {
+    "name": "dev",
+    "organization": "dev",
+    "domain": "*******.ovh",
+    "timezone": "Europe/Paris",
+    "locale": "fr-FR"
+  },
+
+  "environment": {
+    "supported": [
+      "local",
+      "dev",
+      "preprod",
+      "prod"
+    ],
+
+    "default": "local",
+
+    "variables": {
+      "NODE_ENV": "${environment}",
+      "TZ": "Europe/Paris",
+      "LANG": "fr_FR.UTF-8"
+    }
+  },
+
+  "infrastructure": {
+    "provider": "custom",
+    "architecture": "distributed",
+
+    "regions": {
+      "default": "eu-west",
+      "available": [
+        "eu-west"
+      ]
+    },
+
+    "network": {
+      "protocol": "ipv4",
+      "mtu": 1500,
+
+      "reservedNetworks": [
+        "10.0.0.0/8",
+        "172.16.0.0/12",
+        "192.168.0.0/16"
+      ]
+    },
+
+    "naming": {
+      "nodeFormat": "{environment}-{role}-{index}",
+      "serviceFormat": "{service}-{environment}",
+      "containerFormat": "dev-{environment}-{service}-{index}"
+    }
+  },
+
+  "network": {
+    "protocols": [
+      "tcp",
+      "udp"
+    ],
+
+    "ports": {
+      "minecraft": 25565,
+      "minecraftStatus": 25566,
+
+      "http": 80,
+      "https": 443,
+
+      "ssh": 22,
+
+      "api": 8080,
+      "metrics": 9090,
+
+      "mongodb": 27017,
+      "redis": 6379
+    },
+
+    "dynamicPorts": {
+      "enabled": true,
+      "range": {
+        "start": 30000,
+        "end": 35000
+      }
+    },
+
+    "healthChecks": {
+      "enabled": true,
+      "interval": 5000,
+      "timeout": 2000,
+      "retries": 3
+    }
+  },
+
+  "services": {
+    "proxy": {
+      "type": "velocity",
+      "protocol": "minecraft",
+      "port": 25565,
+      "loadBalancing": {
+        "enabled": true,
+        "algorithm": "least-connections"
+      }
+    },
+
+    "game": {
+      "dynamicAllocation": true,
+      "portRange": {
+        "start": 30000,
+        "end": 35000
+      },
+
+      "lifecycle": {
+        "autoStart": true,
+        "autoRestart": true,
+        "gracefulShutdown": true,
+        "shutdownTimeout": 15000
+      }
+    },
+
+    "mongodb": {
+      "type": "mongodb",
+      "port": 27017,
+
+      "connection": {
+        "connectTimeout": 5000,
+        "serverSelectionTimeout": 5000,
+        "socketTimeout": 30000
+      }
+    },
+
+    "redis": {
+      "type": "redis",
+      "port": 6379,
+
+      "connection": {
+        "connectTimeout": 5000,
+        "commandTimeout": 3000
+      }
+    }
+  },
+
+  "registry": {
+    "enabled": true,
+
+    "service": "service-registry",
+
+    "heartbeat": {
+      "enabled": true,
+      "interval": 2000,
+      "timeout": 10000
+    },
+
+    "discovery": {
+      "enabled": true,
+      "ttl": 30
+    }
+  },
+
+  "docker": {
+    "enabled": true,
+
+    "engine": {
+      "socket": "/var/run/docker.sock",
+      "apiVersion": "auto"
+    },
+
+    "network": {
+      "driver": "bridge",
+      "internal": false
+    },
+
+    "containers": {
+      "restartPolicy": "unless-stopped",
+
+      "healthCheck": {
+        "enabled": true,
+        "interval": 10000,
+        "timeout": 3000,
+        "retries": 3,
+        "startPeriod": 10000
+      }
+    }
+  },
+
+  "database": {
+    "mongodb": {
+      "enabled": true,
+
+      "defaults": {
+        "readPreference": "primaryPreferred",
+        "retryWrites": true,
+        "retryReads": true,
+        "writeConcern": "majority"
+      },
+
+      "pool": {
+        "minSize": 5,
+        "maxSize": 100,
+        "maxIdleTime": 60000
+      }
+    },
+
+    "redis": {
+      "enabled": true,
+
+      "defaults": {
+        "database": 0,
+        "keyPrefix": "rushmc:"
+      },
+
+      "pool": {
+        "maxTotal": 32,
+        "maxIdle": 16,
+        "minIdle": 2
+      }
+    }
+  },
+
+  "security": {
+    "network": {
+      "defaultPolicy": "DROP",
+      "stateful": true
+    },
+
+    "tls": {
+      "enabled": true,
+      "minimumVersion": "TLSv1.3"
+    },
+
+    "secrets": {
+      "provider": "environment",
+      "allowPlaintext": false,
+      "requiredVariables": [
+        "MONGODB_URI",
+        "REDIS_PASSWORD",
+        "VELOCITY_FORWARDING_SECRET"
+      ]
+    },
+
+    "ssh": {
+      "port": 22,
+      "passwordAuthentication": false,
+      "rootLogin": false
+    }
+  },
+
+  "observability": {
+    "logging": {
+      "format": "json",
+      "timestamp": true,
+      "includeHostname": true,
+      "includeEnvironment": true,
+      "includeService": true
+    },
+
+    "metrics": {
+      "enabled": true,
+      "protocol": "prometheus",
+      "port": 9090,
+      "path": "/metrics"
+    },
+
+    "tracing": {
+      "enabled": true,
+      "protocol": "otlp"
+    },
+
+    "health": {
+      "enabled": true,
+      "liveness": "/health/live",
+      "readiness": "/health/ready"
+    }
+  },
+
+  "monitoring": {
+    "prometheus": {
+      "enabled": true,
+      "scrapeInterval": 15
+    },
+
+    "grafana": {
+      "enabled": true
+    },
+
+    "loki": {
+      "enabled": true
+    },
+
+    "alerts": {
+      "enabled": true,
+
+      "rules": {
+        "nodeOffline": true,
+        "highCpu": true,
+        "highMemory": true,
+        "highDisk": true,
+        "serviceUnavailable": true,
+        "databaseUnavailable": true,
+        "redisUnavailable": true
+      }
+    }
+  },
+
+  "deployment": {
+    "strategy": "rolling",
+
+    "healthCheckBeforeDeploy": true,
+    "healthCheckAfterDeploy": true,
+
+    "rollback": {
+      "enabled": true,
+      "automatic": true,
+      "maxAttempts": 2
+    },
+
+    "drain": {
+      "enabled": true,
+      "timeout": 30000
+    }
+  },
+
+  "artifacts": {
+    "registry": {
+      "enabled": true,
+      "type": "docker"
+    },
+
+    "images": {
+      "minecraft": {
+        "base": "azul/zulu-openjdk:21"
+      }
+    }
+  },
+
+  "dns": {
+    "provider": "external",
+
+    "ttl": {
+      "default": 300,
+      "production": 60
+    },
+
+    "records": {
+      "play": {
+        "type": "A"
+      },
+      "api": {
+        "type": "A"
+      },
+      "status": {
+        "type": "A"
+      }
+    }
+  },
+
+  "backup": {
+    "enabled": true,
+
+    "retention": {
+      "daily": 7,
+      "weekly": 4,
+      "monthly": 3
+    },
+
+    "databases": {
+      "mongodb": true,
+      "redis": false
+    }
+  },
+
+  "limits": {
+    "connections": {
+      "perIp": 100,
+      "perSecond": 50
+    },
+
+    "api": {
+      "requestsPerSecond": 100,
+      "burst": 250
+    }
+  },
+
+  "features": {
+    "dynamicServers": true,
+    "serviceDiscovery": true,
+    "automaticScaling": true,
+    "metrics": true,
+    "tracing": true,
+    "centralizedLogging": true,
+    "automaticBackups": true
+  }
+}
