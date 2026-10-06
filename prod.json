@@ -1,0 +1,306 @@
+{
+  "environment": "production",
+  "domain": "*******.ovh",
+
+  "network": {
+    "cidr": "10.40.0.0/16",
+    "gateway": "10.40.0.1",
+    "dns": [
+      "1.1.1.1",
+      "8.8.8.8"
+    ],
+    "mtu": 1500,
+
+    "vlans": {
+      "edge": 40,
+      "proxy": 41,
+      "game": 42,
+      "database": 43,
+      "storage": 44,
+      "management": 45,
+      "monitoring": 46
+    }
+  },
+
+  "nodes": {
+    "prod-edge-01": {
+      "hostname": "prod-edge-01",
+      "address": "10.40.1.10",
+      "publicAddress": "203.0.113.100",
+      "role": [
+        "edge",
+        "ddos",
+        "load-balancer"
+      ]
+    },
+
+    "prod-proxy-01": {
+      "hostname": "prod-proxy-01",
+      "address": "10.40.2.10",
+      "role": [
+        "velocity",
+        "proxy"
+      ]
+    },
+
+    "prod-proxy-02": {
+      "hostname": "prod-proxy-02",
+      "address": "10.40.2.11",
+      "role": [
+        "velocity",
+        "proxy"
+      ]
+    },
+
+    "prod-game-01": {
+      "hostname": "prod-game-01",
+      "address": "10.40.3.10",
+      "role": [
+        "game",
+        "docker"
+      ]
+    },
+
+    "prod-game-02": {
+      "hostname": "prod-game-02",
+      "address": "10.40.3.11",
+      "role": [
+        "game",
+        "docker"
+      ]
+    },
+
+    "prod-game-03": {
+      "hostname": "prod-game-03",
+      "address": "10.40.3.12",
+      "role": [
+        "game",
+        "docker"
+      ]
+    },
+
+    "prod-db-01": {
+      "hostname": "prod-db-01",
+      "address": "10.40.4.10",
+      "role": [
+        "mongodb",
+        "redis"
+      ]
+    },
+
+    "prod-db-02": {
+      "hostname": "prod-db-02",
+      "address": "10.40.4.11",
+      "role": [
+        "mongodb",
+        "redis"
+      ]
+    },
+
+    "prod-monitoring-01": {
+      "hostname": "prod-monitoring-01",
+      "address": "10.40.6.10",
+      "role": [
+        "prometheus",
+        "grafana",
+        "loki"
+      ]
+    }
+  },
+
+  "services": {
+    "edge": {
+      "listen": {
+        "minecraft": 25565,
+        "status": 25566,
+        "https": 443
+      },
+
+      "upstreams": [
+        "prod-proxy-01",
+        "prod-proxy-02"
+      ],
+
+      "healthCheck": {
+        "enabled": true,
+        "interval": 2000,
+        "timeout": 1000,
+        "retries": 3
+      }
+    },
+
+    "proxy": {
+      "nodes": [
+        "prod-proxy-01",
+        "prod-proxy-02"
+      ],
+      "ports": {
+        "minecraft": 25565,
+        "admin": 8080,
+        "metrics": 9091
+      },
+
+      "loadBalancing": {
+        "algorithm": "least-connections",
+        "stickySessions": false
+      }
+    },
+
+    "game": {
+      "network": "10.40.3.0/24",
+
+      "portRange": {
+        "start": 30000,
+        "end": 35000
+      },
+
+      "allocation": {
+        "strategy": "dynamic",
+        "reusePorts": true,
+        "healthCheck": true
+      }
+    },
+
+    "mongodb": {
+      "cluster": true,
+
+      "nodes": [
+        "prod-db-01:27017",
+        "prod-db-02:27017"
+      ],
+
+      "replicaSet": "kho-prod",
+
+      "network": "10.40.4.0/24"
+    },
+
+    "redis": {
+      "cluster": true,
+
+      "nodes": [
+        "prod-db-01:6379",
+        "prod-db-02:6379"
+      ],
+
+      "network": "10.40.4.0/24"
+    },
+
+    "monitoring": {
+      "prometheus": "10.40.6.10:9090",
+      "grafana": "10.40.6.10:3000",
+      "loki": "10.40.6.10:3100"
+    }
+  },
+
+  "firewall": {
+    "defaultPolicy": "DROP",
+
+    "rules": [
+      {
+        "name": "minecraft",
+        "source": "0.0.0.0/0",
+        "destination": "edge",
+        "protocol": "tcp",
+        "port": 25565,
+        "action": "ALLOW"
+      },
+      {
+        "name": "minecraft-status",
+        "source": "0.0.0.0/0",
+        "destination": "edge",
+        "protocol": "tcp",
+        "port": 25566,
+        "action": "ALLOW"
+      },
+      {
+        "name": "proxy-to-game",
+        "source": "proxy",
+        "destination": "game",
+        "protocol": "tcp",
+        "portRange": "30000-35000",
+        "action": "ALLOW"
+      },
+      {
+        "name": "game-to-redis",
+        "source": "game",
+        "destination": "database",
+        "protocol": "tcp",
+        "port": 6379,
+        "action": "ALLOW"
+      },
+      {
+        "name": "game-to-mongodb",
+        "source": "game",
+        "destination": "database",
+        "protocol": "tcp",
+        "port": 27017,
+        "action": "ALLOW"
+      },
+      {
+        "name": "monitoring",
+        "source": "monitoring",
+        "destination": "all-internal",
+        "protocol": "tcp",
+        "portRange": "9100-9200",
+        "action": "ALLOW"
+      },
+      {
+        "name": "ssh",
+        "source": "management",
+        "destination": "all-internal",
+        "protocol": "tcp",
+        "port": 22,
+        "action": "ALLOW"
+      }
+    ]
+  },
+
+  "dns": {
+    "records": [
+      {
+        "name": "play",
+        "type": "A",
+        "value": "203.0.113.100",
+        "ttl": 30
+      },
+      {
+        "name": "status",
+        "type": "A",
+        "value": "203.0.113.100",
+        "ttl": 60
+      },
+      {
+        "name": "api",
+        "type": "A",
+        "value": "203.0.113.100",
+        "ttl": 60
+      }
+    ]
+  },
+
+  "routing": {
+    "internal": [
+      "10.40.0.0/16"
+    ],
+    "peering": [
+      "10.30.0.0/16"
+    ],
+    "failover": {
+      "enabled": true,
+      "healthCheckInterval": 2000
+    }
+  },
+
+  "ddos": {
+    "enabled": true,
+    "provider": "edge",
+    "rateLimit": {
+      "enabled": true,
+      "connectionsPerSecond": 5000
+    },
+    "connectionTracking": {
+      "enabled": true,
+      "maxConnectionsPerIp": 100
+    }
+  }
+}
