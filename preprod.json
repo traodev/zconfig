@@ -1,0 +1,157 @@
+{
+  "environment": "preprod",
+  "domain": "preprod.*******.ovh",
+  "network": {
+    "cidr": "10.30.0.0/16",
+    "gateway": "10.30.0.1",
+    "dns": [
+      "1.1.1.1",
+      "8.8.8.8"
+    ],
+    "vlans": {
+      "proxy": 30,
+      "game": 31,
+      "database": 32,
+      "management": 33,
+      "monitoring": 34
+    }
+  },
+  "nodes": {
+    "preprod-proxy-01": {
+      "hostname": "preprod-proxy-01",
+      "address": "10.30.1.10",
+      "publicAddress": "203.0.113.20",
+      "role": [
+        "proxy",
+        "load-balancer"
+      ]
+    },
+    "preprod-game-01": {
+      "hostname": "preprod-game-01",
+      "address": "10.30.2.10",
+      "publicAddress": "203.0.113.21",
+      "role": [
+        "game",
+        "docker"
+      ]
+    },
+    "preprod-game-02": {
+      "hostname": "preprod-game-02",
+      "address": "10.30.2.11",
+      "publicAddress": "203.0.113.22",
+      "role": [
+        "game",
+        "docker"
+      ]
+    },
+    "preprod-db-01": {
+      "hostname": "preprod-db-01",
+      "address": "10.30.3.10",
+      "role": [
+        "mongodb",
+        "redis"
+      ]
+    }
+  },
+  "services": {
+    "proxy": {
+      "nodes": [
+        "preprod-proxy-01"
+      ],
+      "ports": {
+        "minecraft": 25565,
+        "status": 25566,
+        "admin": 8080
+      }
+    },
+    "game": {
+      "network": "10.30.2.0/24",
+      "portRange": {
+        "start": 30000,
+        "end": 31000
+      }
+    },
+    "redis": {
+      "nodes": [
+        "preprod-db-01"
+      ],
+      "port": 6379
+    },
+    "mongodb": {
+      "nodes": [
+        "preprod-db-01"
+      ],
+      "port": 27017
+    },
+    "monitoring": {
+      "prometheus": "10.30.4.10:9090",
+      "grafana": "10.30.4.11:3000"
+    }
+  },
+  "firewall": {
+    "defaultPolicy": "DROP",
+    "zones": {
+      "internet": {
+        "allowed": [
+          "proxy"
+        ]
+      },
+      "proxy": {
+        "allowed": [
+          "game",
+          "management"
+        ]
+      },
+      "game": {
+        "allowed": [
+          "database",
+          "monitoring"
+        ]
+      },
+      "database": {
+        "allowed": [
+          "game",
+          "management"
+        ]
+      },
+      "management": {
+        "allowed": [
+          "proxy",
+          "game",
+          "database",
+          "monitoring"
+        ]
+      }
+    }
+  },
+  "dns": {
+    "records": [
+      {
+        "name": "play",
+        "type": "A",
+        "value": "203.0.113.20",
+        "ttl": 60
+      },
+      {
+        "name": "api",
+        "type": "A",
+        "value": "203.0.113.20",
+        "ttl": 60
+      },
+      {
+        "name": "metrics",
+        "type": "A",
+        "value": "10.30.4.10",
+        "ttl": 30
+      }
+    ]
+  },
+  "routing": {
+    "internal": [
+      "10.30.0.0/16"
+    ],
+    "peering": [
+      "10.20.0.0/16"
+    ]
+  }
+}
