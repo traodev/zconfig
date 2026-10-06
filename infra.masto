@@ -1,0 +1,300 @@
+infrastructure {
+    name "personal"
+    provider "custom"
+    region "eu-west"
+    timezone "Europe/Paris"
+
+    network {
+        ipv4 {
+            primary "10.0.0.0/8"
+            private [
+                "10.0.0.0/8"
+                "172.16.0.0/12"
+                "192.168.0.0/16"
+            ]
+        }
+
+        dns {
+            servers [
+                "1.1.1.1"
+                "8.8.8.8"
+            ]
+        }
+
+        vlans {
+            management {
+                id 10
+                subnet "10.10.0.0/24"
+            }
+
+            infrastructure {
+                id 20
+                subnet "10.20.0.0/24"
+            }
+
+            services {
+                id 30
+                subnet "10.30.0.0/24"
+            }
+
+            storage {
+                id 40
+                subnet "10.40.0.0/24"
+            }
+
+            monitoring {
+                id 50
+                subnet "10.50.0.0/24"
+            }
+        }
+    }
+
+    nodes {
+        node "server-01" {
+            hostname "server-01"
+            address "10.10.0.10"
+
+            roles [
+                compute
+                storage
+                docker
+            ]
+
+            resources {
+                cpu 16
+                memory "16GB"
+                storage "2TB"
+            }
+
+            interfaces {
+                eth0 {
+                    address "10.10.0.10/24"
+                    gateway "10.10.0.1"
+                }
+            }
+        }
+
+        node "storage-01" {
+            hostname "storage-01"
+            address "10.40.0.10"
+
+            roles [
+                storage
+                backup
+            ]
+
+            resources {
+                cpu 8
+                memory "32GB"
+                storage "12TB"
+            }
+        }
+    }
+
+    storage {
+        pool "main" {
+            type zfs
+
+            nodes [
+                "storage-01"
+            ]
+
+            redundancy raidz2
+
+            datasets {
+                backups {
+                    mount "/srv/backups"
+                    compression true
+                    encryption true
+                }
+
+                data {
+                    mount "/srv/data"
+                    compression true
+                    encryption true
+                }
+            }
+        }
+    }
+
+    compute {
+        scheduler {
+            type distributed
+            strategy least_loaded
+        }
+
+        resources {
+            overcommit_cpu 1.5
+            overcommit_memory 1.0
+        }
+    }
+
+    containers {
+        runtime docker
+
+        networks {
+            internal {
+                driver bridge
+                subnet "172.20.0.0/16"
+            }
+
+            services {
+                driver bridge
+                subnet "172.21.0.0/16"
+            }
+        }
+
+        defaults {
+            restart unless_stopped
+            log_driver json
+        }
+    }
+
+    firewall {
+        policy deny
+
+        zones {
+            internet {
+                trust 0
+            }
+
+            services {
+                trust 50
+            }
+
+            infrastructure {
+                trust 80
+            }
+
+            management {
+                trust 100
+            }
+        }
+
+        rules {
+            allow {
+                source management
+                destination infrastructure
+                protocol any
+            }
+
+            allow {
+                source management
+                destination services
+                protocol tcp
+                ports [
+                    22
+                    443
+                ]
+            }
+
+            allow {
+                source services
+                destination infrastructure
+                protocol tcp
+                state established
+            }
+
+            allow {
+                source monitoring
+                destination any
+                protocol tcp
+            }
+        }
+    }
+
+    routing {
+        default {
+            gateway "10.10.0.1"
+        }
+
+        routes {
+            "10.20.0.0/24" via "10.10.0.1"
+            "10.30.0.0/24" via "10.10.0.1"
+            "10.40.0.0/24" via "10.10.0.1"
+            "10.50.0.0/24" via "10.10.0.1"
+        }
+    }
+
+    dns {
+        zones {
+            "infra.local" {
+                ttl 60
+
+                records {
+                    "server-01" A "10.10.0.10"
+                    "storage-01" A "10.40.0.10"
+                }
+            }
+        }
+    }
+
+    monitoring {
+        metrics {
+            enabled true
+            interval "15s"
+        }
+
+        health {
+            interval "5s"
+            timeout "2s"
+            retries 3
+        }
+
+        alerts {
+            node_down true
+            disk_full true
+            memory_high true
+            cpu_high true
+            network_down true
+        }
+    }
+
+    backup {
+        enabled true
+
+        schedule {
+            daily "02:00"
+            weekly "sunday 03:00"
+        }
+
+        retention {
+            daily 14
+            weekly 8
+            monthly 12
+        }
+
+        destinations [
+            "storage-01:/srv/backups"
+        ]
+    }
+
+    security {
+        ssh {
+            port 22
+            password_authentication false
+            root_login false
+        }
+
+        secrets {
+            provider vault
+            encryption true
+        }
+
+        certificates {
+            provider letsencrypt
+            auto_renew true
+        }
+    }
+
+    deployment {
+        strategy rolling
+
+        healthcheck true
+
+        rollback {
+            enabled true
+            automatic true
+        }
+    }
+}
