@@ -1,0 +1,28 @@
+{
+  "runtime": {
+    "required": true,
+    "engine": "docker",
+
+    "network": {
+      "name": "zconfig",
+      "driver": "bridge"
+    },
+
+    "directories": {
+      "data": "./data",
+      "logs": "./logs",
+      "cache": "./cache"
+    },
+
+    "services": {
+      "config": true,
+      "network": true,
+      "health": true
+    },
+
+    "requirements": {
+      "docker": ">=27",
+      "java": ">=21"
+    }
+  }
+}
